@@ -1,3 +1,7 @@
+#### WIFI INDOOR LOCATION ####
+
+# Raúl Vázquez Méndez
+
 #### LIBRARIES ####
 pacman::p_load("pacman",
                "ggplot2",
@@ -220,8 +224,6 @@ train_no_30 <- train_Zvar %>% dplyr::filter(apply(train_Zvar[WAPS_trainZvar], 1,
 
 #### MODELING ####
 
-#### BUILDING ####
-
 ## SAMPLING ##
 train_Zvarsample <- train_Zvar %>% group_by(BUILDINGID, FLOOR) %>% sample_n(150) #taking smart sample of 0 variance
 train_NZvarsample <- train_NZvar %>% group_by(BUILDINGID, FLOOR) %>% sample_n(150) #taking smart sample of NZ variance
@@ -261,8 +263,9 @@ metric_comp <- as.data.frame(metric_comp)
 colnames(metric_comp) <- c("train_Zvarsample","train_NZvarsample","train_no30_sample")
 rm(test_NZvar)
 
-## RF Building ID ##
+#### RANDOM FOREST ####
 
+#### BUILDING ####
 set.seed(777)
 model_RF_Building <- randomForest(y = train_Zvar$BUILDINGID,
                          x = train_Zvar[WAPS_trainZvar],
@@ -279,8 +282,61 @@ saveRDS(model_RF_Building, file = "model_RF_building.rds")
 readRDS(model_RF_Building, file = "model_RF_building.rds")
 
 #### FLOOR ####
+train_floor <- train_Zvar %>% select(c(1:465), BUILDINGID, FLOOR)
+set.seed(777)
 
-# Filter per Building to find the best performance for predict Floor #
+model_RF_Floor <- randomForest(y = train_floor$FLOOR,
+                             x = train_floor[,1:466],
+                             importance = T,
+                             method = "rf",
+                             ntree = 100) #rf
+
+prediction_RF_Floor <- predict(model_RF_Floor, test_Zvar) #prediction
+confusionMatrix(prediction_RF_Floor, test_Zvar$FLOOR)
+
+test_Zvar$FLOOR_PREDICT <- prediction_RF_Floor #91% Acc
+ 
+saveRDS(model_RF_Floor, file = "model_RF_Floor.rds")
+readRDS(model_RF_Floor, file = "model_RF_Floor.rds")
+
+#### LATITUDE ####
+train_Regression <- train_Zvar %>% select(c(1:465), BUILDINGID, FLOOR, LONGITUDE, LATITUDE) #Train df for Regression
+test_Regression <- test_Zvar %>% select(c(1:467), BUILDINGID, FLOOR, LONGITUDE, LATITUDE) #Test df for Regression
+
+set.seed(777)
+
+model_RF_Latitude <- randomForest(y = train_Regression$LATITUDE,
+                             x = train_Regression[,1:468],
+                             importance = T,
+                             method = "rf",
+                             ntree = 100) #rf
+
+prediction_RF_Latitude <- predict(model_RF_Latitude, test_Regression) #prediction
+postResample #5,34%
+
+saveRDS(model_RF_Latitude, file = "model_RF_Latitude.rds")
+readRDS(model_RF_Latitude, file = "model_RF_Latitude.rds")
+
+#### LONGITUDE ####
+set.seed(777)
+
+train_Regression_Longitude <- train_Regression
+
+train_Regression_Longitude <- train_Regression_Longitude[,c(1:467,469,468)] #reorder columns to predcit Longitude with Latitude
+
+model_RF_Longitude <- randomForest(y = train_Regression_Longitude$LONGITUDE,
+                                  x = train_Regression_Longitude[,1:468],
+                                  importance = T,
+                                  method = "rf",
+                                  ntree = 100) #rf
+
+prediction_RF_Longitude <- predict(model_RF_Longitude, test_Regression) #prediction
+postResample(prediction_RF_Longitude, test_Regression$LONGITUDE) #5,81 MAE
+
+saveRDS(model_RF_Longitude, file = "model_RF_Longitude.rds")
+readRDS(model_RF_Longitude, file = "model_RF_Longitude.rds")
+
+#### MODELING II (Predicting per Building to check perfromance of the models) With RANDOM FOREST ####
 
 ## Filter per Building ##
 train_TC_floor <- train_Zvar %>% dplyr::filter(BUILDINGID == "TC") 
@@ -344,8 +400,9 @@ test_TI_floor$FLOOR <- factor(test_TI_floor$FLOOR, levels = c("Main Floor",
                                                                 "1st Floor",
                                                                 "2nd Floor", 
                                                                 "3rd Floor"))
+#### FLOOR II ####
 
-## TC Prediction ##
+## TC ##
 set.seed(777)
 
 model_RF_TC <- randomForest(y = train_TC_floor$FLOOR,
@@ -363,7 +420,7 @@ saveRDS(model_RF_TC, file = "model_RF_TC.rds")
 readRDS(model_RF_TC, file = "model_RF_TC.rds")
 
 
-## TD Prediction ##
+## TD ##
 set.seed(777)
 
 model_RF_TD <- randomForest(y = train_TD_floor$FLOOR,
@@ -380,7 +437,7 @@ test_TD_floor$FLOOR_PREDICT <- prediction_RF_TD #80,91 Accuracy
 saveRDS(model_RF_TD, file = "model_RF_TD.rds")
 readRDS(model_RF_TD, file = "model_RF_TD.rds")
 
-## TI Prediction ##
+## TI ##
 set.seed(777)
 
 model_RF_TI <- randomForest(y = train_TI_floor$FLOOR,
@@ -392,96 +449,14 @@ model_RF_TI <- randomForest(y = train_TI_floor$FLOOR,
 prediction_RF_TI <- predict(model_RF_TI, test_TI_floor) #prediction
 confusionMatrix(prediction_RF_TI, test_TI_floor$FLOOR)
 
-test_TI_floor$FLOOR_PREDICT <- prediction_RF_TI
+test_TI_floor$FLOOR_PREDICT <- prediction_RF_TI #97,44 Accuracy
  
 saveRDS(model_RF_TI, file = "model_RF_TI.rds")
 readRDS(model_RF_TI, file = "model_RF_TI.rds")
 
-##  Prediction Floor with the three Buildings (RF) ##
-train_floor <- train_Zvar %>% select(c(1:465), BUILDINGID, FLOOR)
-set.seed(777)
+#### LATITUDE II ####
 
-model_RF_Floor <- randomForest(y = train_floor$FLOOR,
-                             x = train_floor[,1:466],
-                             importance = T,
-                             method = "rf",
-                             ntree = 100) #rf
-
-prediction_RF_Floor <- predict(model_RF_Floor, test_Zvar) #prediction
-confusionMatrix(prediction_RF_Floor, test_Zvar$FLOOR)
-
-test_Zvar$FLOOR_PREDICT <- prediction_RF_Floor #91% Acc
- 
-saveRDS(model_RF_Floor, file = "model_RF_Floor.rds")
-readRDS(model_RF_Floor, file = "model_RF_Floor.rds")
-
-## Prediction Floor with the three Buildings (KNN) ##
-
-## Dummy Vars #
-dumm <- dummyVars(" ~ .", data = train_floor[c("BUILDINGID")])
-pred <- predict(dumm, newdata = train_floor)
-train_floor_knn <- data.frame(pred)
-
-train_floor_KNN <- train_floor
-train_floor_KNN$BUILDTC <- train_floor_knn$BUILDINGID.TC
-train_floor_KNN$BUILDTD <- train_floor_knn$BUILDINGID.TD
-train_floor_KNN$BUILDTI <- train_floor_knn$BUILDINGID.TI
-
-train_floor_KNN$BUILDINGID <- NULL
-train_floor_KNN <- train_floor_KNN[,c(1:465,467,468,469,466)]
-
-# Normalize WAPS #
-preprocessParams <- preProcess(train_floor[,1:465], method=c("range"))
-transformed <- predict(preprocessParams, train_floor[,1:465])
-train_floor_KNN[,1:465] <- transformed
-
-# On test #
-
-## Dummy Vars ##
-test_floor <- test_Zvar %>% select(c(1:465), BUILDINGID, FLOOR)
-
-dumm_test <- dummyVars(" ~ .", data = test_floor[c("BUILDINGID")])
-pred_test <- predict(dumm_test, newdata = test_floor)
-test_floor_knn <- data.frame(pred_test)
-
-test_floor_KNN <- test_floor
-test_floor_KNN$BUILDTC <- test_floor_knn$BUILDINGID.TC
-test_floor_KNN$BUILDTD <- test_floor_knn$BUILDINGID.TD
-test_floor_KNN$BUILDTI <- test_floor_knn$BUILDINGID.TI
-
-test_floor_KNN$BUILDINGID <- NULL
-test_floor_KNN <- test_floor_KNN[,c(1:465,467,468,469,466)]
-
-# Normalize WAPS #
-preprocessParams <- preProcess(test_floor[,1:465], method=c("range"))
-transformed <- predict(preprocessParams, test_floor[,1:465])
-test_floor_KNN[,1:465] <- transformed
-
-## KNN Floor ##
-model_KNN_Floor <- FNN::knn.reg(train = train_floor_KNN, test = test_floor_KNN, y = train_floor_KNN$FLOOR, k = 4)
-
-#### LATITUDE ####
-train_Regression <- train_Zvar %>% select(c(1:465), BUILDINGID, FLOOR, LONGITUDE, LATITUDE)
-test_Regression <- test_Zvar %>% select(c(1:467), BUILDINGID, FLOOR, LONGITUDE, LATITUDE)
-
-## Predicion Latitue with three Buildings (RF) ##
-set.seed(777)
-
-model_RF_Latitude <- randomForest(y = train_Regression$LATITUDE,
-                             x = train_Regression[,1:468],
-                             importance = T,
-                             method = "rf",
-                             ntree = 100) #rf
-
-prediction_RF_Latitude <- predict(model_RF_Latitude, test_Regression) #prediction
-postResample #5,34%
-
-saveRDS(model_RF_Latitude, file = "model_RF_Latitude.rds")
-readRDS(model_RF_Latitude, file = "model_RF_Latitude.rds")
-
-## Latitude per Building ##
-
-# Filtering per Bulding in order to find a better performance #
+## Filtering per Bulding on Regression in order to find a better performance ##
 
 train_TC_Regression <- train_Zvar %>% dplyr::filter(BUILDINGID == "TC") 
 train_TD_Regression <- train_Zvar %>% dplyr::filter(BUILDINGID == "TD") 
@@ -584,26 +559,52 @@ model_RF_TI_Latitude <- randomForest(y = train_TI_Regression$LONGITUDE,
 prediction_RF_TI_Latitude <- predict(model_RF_TI_Latitude, test_TI_Regression) #prediction
 postResample(prediction_RF_TI_Latitude, test_TI_Regression$LONGITUDE)
 
-#### LONGITUDE ####
+#### MODELING III  (Preprocess Distance Based Models) ####
 
-## Longitude Prediction (RF) ##
-set.seed(777)
+## Dummy Vars ##
+dumm <- dummyVars(" ~ .", data = train_floor[c("BUILDINGID")])
+pred <- predict(dumm, newdata = train_floor)
+train_floor_knn <- data.frame(pred)
 
-train_Regression_Longitude <- train_Regression
+train_floor_KNN <- train_floor
+train_floor_KNN$BUILDTC <- train_floor_knn$BUILDINGID.TC
+train_floor_KNN$BUILDTD <- train_floor_knn$BUILDINGID.TD
+train_floor_KNN$BUILDTI <- train_floor_knn$BUILDINGID.TI
 
-train_Regression_Longitude <- train_Regression_Longitude[,c(1:467,469,468)] #reorder columns to predcit Longitude with Latitude
+train_floor_KNN$BUILDINGID <- NULL
+train_floor_KNN <- train_floor_KNN[,c(1:465,467,468,469,466)]
 
-model_RF_Longitude <- randomForest(y = train_Regression_Longitude$LONGITUDE,
-                                  x = train_Regression_Longitude[,1:468],
-                                  importance = T,
-                                  method = "rf",
-                                  ntree = 100) #rf
+## Normalize WAPS ##
+preprocessParams <- preProcess(train_floor[,1:465], method=c("range"))
+transformed <- predict(preprocessParams, train_floor[,1:465])
+train_floor_KNN[,1:465] <- transformed
 
-prediction_RF_Longitude <- predict(model_RF_Longitude, test_Regression) #prediction
-postResample(prediction_RF_Longitude, test_Regression$LONGITUDE) #5,81 MAE
+## On test ##
 
-saveRDS(model_RF_Longitude, file = "model_RF_Longitude.rds")
-readRDS(model_RF_Longitude, file = "model_RF_Longitude.rds")
+## Dummy Vars ##
+test_floor <- test_Zvar %>% select(c(1:465), BUILDINGID, FLOOR)
+
+dumm_test <- dummyVars(" ~ .", data = test_floor[c("BUILDINGID")])
+pred_test <- predict(dumm_test, newdata = test_floor)
+test_floor_knn <- data.frame(pred_test)
+
+test_floor_KNN <- test_floor
+test_floor_KNN$BUILDTC <- test_floor_knn$BUILDINGID.TC
+test_floor_KNN$BUILDTD <- test_floor_knn$BUILDINGID.TD
+test_floor_KNN$BUILDTI <- test_floor_knn$BUILDINGID.TI
+
+test_floor_KNN$BUILDINGID <- NULL
+test_floor_KNN <- test_floor_KNN[,c(1:465,467,468,469,466)]
+
+## Normalize WAPS ##
+preprocessParams <- preProcess(test_floor[,1:465], method=c("range"))
+transformed <- predict(preprocessParams, test_floor[,1:465])
+test_floor_KNN[,1:465] <- transformed
+
+#### KNN ####
+
+#### FLOOR  ####
+model_KNN_Floor <- FNN::knn(train = train_floor_KNN, test = test_floor_KNN, cl = train_floor_KNN$FLOOR, k = 5)
 
 
 
