@@ -666,12 +666,11 @@ preprocessParams <- preProcess(test_floor[,1:312], method=c("range"))
 transformed <- predict(preprocessParams, test_floor[,1:312])
 test_floor_KNN[,1:312] <- transformed
 
-#### KNN ####
-model_knn_floor <- FNN::knn(train = train_floor_KNN, test = test_floor_KNN, cl = train_floor_KNN$FLOOR, k = 4)
+#### KNN for FLOOR ####
+model_knn_floor <- class::knn(train = train_floor_KNN[,1:314], test = test_floor_KNN[1:314], cl = train_floor_KNN$FLOOR, k = 5)
+confusionMatrix(model_knn_floor, test_floor_KNN$FLOOR) #90,55% PERFO
 
 #### ERROR VISUALIZATION ####
-
-esquisser()
 
 ## BUILDING ##
 ggplot(data = test_Zvar) +
@@ -683,7 +682,7 @@ ggplot(data = test_Zvar) +
 
 ## FLOOR ##
 plot_ly(test_Zvar, x = ~LONGITUDE_PREDICT, y = ~LATITUDE_PREDICT, z = ~FLOOR_PREDICT, color = ~BUILD) %>%
-  add_markers(marker = list(sizeref = 230))
+  add_markers(marker = list(size = 4))
 
 
 ## LONGITUDE (Real vs Predicted) ##
