@@ -348,6 +348,8 @@ model_RF_Longitude <- randomForest(y = train_Regression_Longitude$LONGITUDE,
 prediction_RF_Longitude <- predict(model_RF_Longitude, test_Regression) #prediction
 postResample(prediction_RF_Longitude, test_Regression$LONGITUDE) #5,51 MAE
 
+test_Zvar$LONGITUDE_PREDICT <- prediction_RF_Longitude
+
 saveRDS(model_RF_Longitude, file = "model_RF_Longitude.rds")
 readRDS(model_RF_Longitude, file = "model_RF_Longitude.rds")
 
@@ -469,7 +471,7 @@ test_TI_floor$FLOOR_PREDICT <- prediction_RF_TI #97,44 Accuracy
 saveRDS(model_RF_TI, file = "model_RF_TI.rds")
 readRDS(model_RF_TI, file = "model_RF_TI.rds")
 
-#### LATITUDE II ####
+#### LATITUDE AND LONGITUDE II ####
 
 ## Filtering per Bulding on Regression in order to find a better performance ##
 
@@ -534,44 +536,93 @@ test_TI_Regression$FLOOR <- factor(test_TI_floor$FLOOR, levels = c("Main Floor",
                                                               "1st Floor",
                                                               "2nd Floor", 
                                                               "3rd Floor"))
+## LONGITUDE ##
 
 ## TC ##
 set.seed(777)
 
-model_RF_TC_Latitude <- randomForest(y = train_TC_Regression$LONGITUDE,
+model_RF_TC_Longitude <- randomForest(y = train_TC_Regression$LONGITUDE,
                              x = train_TC_Regression[,1:315],
                              importance = T,
                              method = "rf",
                              ntree = 100) #rf
 
-prediction_RF_TC_Latitude <- predict(model_RF_TC_Latitude, test_TC_Regression) #prediction 5,61 Acc
-postResample(prediction_RF_TC_Latitude, test_TC_Regression$LONGITUDE)
+prediction_RF_TC_Longitude <- predict(model_RF_TC_Longitude, test_TC_Regression) #prediction 5,61 Acc
+postResample(prediction_RF_TC_Longitude, test_TC_Regression$LONGITUDE)
 
 ## TD ##
 set.seed(777)
 
-model_RF_TD_Latitude <- randomForest(y = train_TD_Regression$LONGITUDE,
+model_RF_TD_Longitude <- randomForest(y = train_TD_Regression$LONGITUDE,
                                      x = train_TD_Regression[,1:315],
                                      importance = T,
                                      method = "rf",
                                      ntree = 100) #rf
 
-prediction_RF_TD_Latitude <- predict(model_RF_TD_Latitude, test_TD_Regression) #prediction 6,90 Acc
-postResample(prediction_RF_TD_Latitude, test_TD_Regression$LONGITUDE)
+prediction_RF_TD_Longitude <- predict(model_RF_TD_Longitude, test_TD_Regression) #prediction 6,90 Acc
+postResample(prediction_RF_TD_Longitude, test_TD_Regression$LONGITUDE)
 
 ## TI ##
 set.seed(777)
 
-model_RF_TI_Latitude <- randomForest(y = train_TI_Regression$LONGITUDE,
+model_RF_TI_Longitude <- randomForest(y = train_TI_Regression$LONGITUDE,
                                      x = train_TI_Regression[,1:315],
                                      importance = T,
                                      method = "rf",
                                      ntree = 100) #rf
 
-prediction_RF_TI_Latitude <- predict(model_RF_TI_Latitude, test_TI_Regression) #prediction 3,88 Acc
-postResample(prediction_RF_TI_Latitude, test_TI_Regression$LONGITUDE)
+prediction_RF_TI_Longitude <- predict(model_RF_TI_Longitude, test_TI_Regression) #prediction 3,88 Acc
+postResample(prediction_RF_TI_Longitude, test_TI_Regression$LONGITUDE)
 
-#### MODELING III  (Preprocess Distance Based Models) ####
+## LATITUDE ##
+
+# Prepare Data #
+train_TC_Regression_Lat <- train_TC_Regression
+train_TD_Regression_Lat <- train_TD_Regression
+train_TI_Regression_Lat <- train_TI_Regression
+
+train_TC_Regression_Lat <- train_TC_Regression_Lat[,c(1:314,316,315)]
+train_TD_Regression_Lat <- train_TD_Regression_Lat[,c(1:314,316,315)]
+train_TI_Regression_Lat <- train_TI_Regression_Lat[,c(1:314,316,315)]
+
+
+## TC ##
+set.seed(777)
+
+model_RF_TC_Latitude <- randomForest(y = train_TC_Regression_Lat$LATITUDE,
+                                     x = train_TC_Regression_Lat[,1:315],
+                                     importance = T,
+                                     method = "rf",
+                                     ntree = 100) #rf
+
+prediction_RF_TC_Latitude <- predict(model_RF_TC_Latitude, test_TC_Regression) #prediction 5,61 Acc
+postResample(prediction_RF_TC_Latitude, test_TC_Regression$LATITUDE)
+
+## TD ##
+set.seed(777)
+
+model_RF_TD_Latitude <- randomForest(y = train_TD_Regression_Lat$LATITUDE,
+                                     x = train_TD_Regression_Lat[,1:315],
+                                     importance = T,
+                                     method = "rf",
+                                     ntree = 100) #rf
+
+prediction_RF_TD_Latitude <- predict(model_RF_TD_Latitude, test_TD_Regression) #prediction 6,90 Acc
+postResample(prediction_RF_TD_Latitude, test_TD_Regression$LATITUDE)
+
+## TI ##
+set.seed(777)
+
+model_RF_TI_Latitude <- randomForest(y = train_TI_Regression_Lat$LATITUDE,
+                                     x = train_TI_Regression_Lat[,1:315],
+                                     importance = T,
+                                     method = "rf",
+                                     ntree = 100) #rf
+
+prediction_RF_TI_Latitude <- predict(model_RF_TI_Latitude, test_TI_Regression) #prediction 3,88 Acc
+postResample(prediction_RF_TI_Latitude, test_TI_Regression$LATITUDE)
+
+#### MODELING III  (Preprocess Distance Based Models) KNN and SVM ####
 
 ## On Train ##
 
@@ -615,8 +666,41 @@ preprocessParams <- preProcess(test_floor[,1:312], method=c("range"))
 transformed <- predict(preprocessParams, test_floor[,1:312])
 test_floor_KNN[,1:312] <- transformed
 
-#### COMBINE DATASETS ####
-complete_df <- rbind(train_Zvar[,1:469], test_Zvar[,1:469])
+#### KNN ####
+model_knn_floor <- FNN::knn(train = train_floor_KNN, test = test_floor_KNN, cl = train_floor_KNN$FLOOR, k = 4)
+
+#### ERROR VISUALIZATION ####
+
+esquisser()
+
+## BUILDING ##
+ggplot(data = test_Zvar) +
+  aes(x = LONGITUDE_PREDICT, y = LATITUDE_PREDICT, color = BUILD) +
+  geom_point() +
+  labs(title = "BUILDING",
+    subtitle = "Predictied") +
+  theme_minimal()
+
+## FLOOR ##
+plot_ly(test_Zvar, x = ~LONGITUDE_PREDICT, y = ~LATITUDE_PREDICT, z = ~FLOOR_PREDICT, color = ~BUILD) %>%
+  add_markers(marker = list(sizeref = 230))
+
+
+## LONGITUDE (Real vs Predicted) ##
+ggplot(data = test_Zvar) +
+  aes(x = LONGITUDE, y = LONGITUDE_PREDICT) +
+  geom_point(color = "#0c4c8a") +
+  labs(title = "LONGITUDE",
+    subtitle = "Real vs Predicted") +
+  theme_minimal()
+
+## LATITUDE (Real vs Predicted) ##
+ggplot(data = test_Zvar) +
+  aes(x = LATITUDE, y = LATITUDE_PREDICT) +
+  geom_point(color = "#0c4c8a") +
+  labs(title = "LATITUDE",
+    subtitle = "Real vs Predicted") +
+  theme_minimal()
 
 
 
