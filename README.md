@@ -11,7 +11,9 @@ The UJIIndoorLoc database covers three buildings of Universitat Jaume I with 4 o
 
 The 529 attributes contain the WiFi fingerprint, the coordinates where it was taken, and other useful information. Each WiFi fingerprint can be characterized by the detected Wireless Access Points (WAPs) and the corresponding Received Signal Strength Intensity (RSSI). The intensity values are represented as negative integer values ranging -104dBm (extremely poor signal) to 0dbM. The positive value 100 is used to denote when a WAP was not detected. During the database creation, 520 different WAPs were detected. Thus, the WiFi fingerprint is composed by 520 intensity values.
 
-Then the coordinates (latitude, longitude, floor) and Building ID are provided as the attributes to be predicted. 
+Then the coordinates (latitude, longitude, floor) and Building ID are provided as the attributes to be predicted.
+
+Data source: http://archive.ics.uci.edu/ml/datasets/UJIIndoorLoc
 
 ### Technical Analysis
 Language used: R programming
