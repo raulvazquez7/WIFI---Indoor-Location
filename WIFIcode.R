@@ -670,6 +670,8 @@ test_floor_KNN[,1:312] <- transformed
 model_knn_floor <- class::knn(train = train_floor_KNN[,1:314], test = test_floor_KNN[1:314], cl = train_floor_KNN$FLOOR, k = 5)
 confusionMatrix(model_knn_floor, test_floor_KNN$FLOOR) #90,55% PERFO
 
+#### I HAVE PREDICTED WITH DISTANCE BASED MODELS IN ORDER TO LEARN HOW TO DO IT WITHOUT CARET PACKAGE ####
+
 #### ERROR VISUALIZATION ####
 
 ## BUILDING ##
@@ -686,20 +688,26 @@ plot_ly(test_Zvar, x = ~LONGITUDE_PREDICT, y = ~LATITUDE_PREDICT, z = ~FLOOR_PRE
 
 
 ## LONGITUDE (Real vs Predicted) ##
+
 ggplot(data = test_Zvar) +
-  aes(x = LONGITUDE, y = LONGITUDE_PREDICT) +
-  geom_point(color = "#0c4c8a") +
+  aes(x = LONGITUDE, y = LONGITUDE_PREDICT, color = BUILD) +
+  geom_point() +
   labs(title = "LONGITUDE",
     subtitle = "Real vs Predicted") +
-  theme_minimal()
+  theme_hc()
 
 ## LATITUDE (Real vs Predicted) ##
 ggplot(data = test_Zvar) +
-  aes(x = LATITUDE, y = LATITUDE_PREDICT) +
-  geom_point(color = "#0c4c8a") +
+  aes(x = LATITUDE, y = LATITUDE_PREDICT, color = BUILD) +
+  geom_point() +
   labs(title = "LATITUDE",
     subtitle = "Real vs Predicted") +
   theme_minimal()
 
+## Saving html graph to presentation ##
+p <- plot_ly(train, x = ~LONGITUDE, y = ~LATITUDE, z = ~FLOOR, color = ~BUILDINGID) %>%
+  add_markers(marker = list(size = 4))
+
+htmlwidgets::saveWidget(as.widget(p), "test.html")
 
 
